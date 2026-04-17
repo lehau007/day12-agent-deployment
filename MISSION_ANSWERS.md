@@ -38,10 +38,13 @@
 
 ## Part 3: Cloud Deployment
 
-### Exercise 3.1: Railway deployment
-- **URL**: `https://your-agent.up.railway.app` (Thay bằng URL thật sau khi deploy)
-- **Platform**: Railway
+### Exercise 3.1: Render deployment
+- **URL**: `https://day12-agent-deployment-1.onrender.com/ready`
+- **Platform**: Render
 - **Lý do chọn**: Dễ dàng kết nối với GitHub, tự động build từ Dockerfile và hỗ trợ tốt việc quản lý biến môi trường.
+
+### Ảnh demo
+<img src="screenshots/successful_render_deployment.png" alt="Successful Render Deployment" width="600">
 
 ### Discussion Questions
 1. **Tại sao serverless (Lambda) không phải lúc nào cũng tốt cho AI agent?**: AI agent thường có thời gian xử lý dài (latency cao) và cần tài nguyên lớn (RAM/CPU/Disk cho model). Lambda có giới hạn về timeout (15p) và dung lượng package, đồng thời chi phí sẽ rất đắt nếu chạy liên tục.
@@ -51,13 +54,16 @@
 ## Part 4: API Security
 
 ### Exercise 4.1-4.3: Test results
-- **Authentication (JWT)**: Đã triển khai xác thực bằng JWT (Bearer Token). Khi truy cập `/ask` mà không có token, hệ thống trả về lỗi `401 Unauthorized`. Token có thời hạn 60 phút và chứa thông tin `role` của người dùng.
-- **Rate Limiting**: Giới hạn **10 request/phút** cho mỗi user. Khi gửi request thứ 11 trong vòng 1 phút, hệ thống trả về lỗi `429 Too Many Requests` kèm thông tin `retry_after_seconds`.
-- **Cost Guard**: Triển khai giới hạn ngân sách **$1.0/ngày** mỗi user. Khi tổng chi phí token vượt mức, hệ thống trả về lỗi `402 Payment Required`.
+- **Authentication (JWT)**: Kiểm thử thành công. Khi không có header Authorization, API trả về `401 Unauthorized`. Sau khi đăng nhập với `student/demo123`, nhận được token JWT hợp lệ.
+- **Rate Limiting**: Đã kiểm thử bằng cách gửi 12 request liên tiếp. Kết quả:
+  - Request 1-9: Thành công (`200 OK`).
+  - Request 10: Trả về lỗi `429 Too Many Requests` với thông báo "Rate limit exceeded".
+  - Điều này xác nhận hệ thống đã bảo vệ server khỏi việc bị spam hiệu quả.
+- **Cost Guard**: Mỗi request trả về thông tin `budget_remaining_usd` (ví dụ: `1.9e-05`). Hệ thống theo dõi chính xác lượng token tiêu thụ để bảo vệ ngân sách.
 
 ### Exercise 4.4: Cost guard implementation
 - **Cách tiếp cận**: Hệ thống tính toán chi phí dựa trên đơn giá của GPT-4o-mini ($0.15/1M input tokens). Trước khi gọi LLM, hàm `check_budget` sẽ kiểm tra hạn mức. Sau khi gọi LLM, số lượng token thực tế trả về sẽ được cộng dồn vào hồ sơ của user (`UsageRecord`).
-- **Lưu trữ**: Hiện tại lưu trữ In-memory (tạm thời). Trong bản production hoàn chỉnh (Lab 06), thông tin này sẽ được chuyển sang Redis để đảm bảo không bị mất khi ứng dụng restart hoặc scale.
+- **Lưu trữ**: Trong phiên bản hiện tại, dữ liệu được lưu In-memory. Để tối ưu cho môi trường production thật (như trong Lab 06), chúng tôi khuyến nghị chuyển dữ liệu này sang Redis để không bị mất dữ liệu khi restart app.
 
 ## Part 5: Scaling & Reliability
 
