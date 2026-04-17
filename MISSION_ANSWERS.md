@@ -68,7 +68,7 @@
 ## Part 5: Scaling & Reliability
 
 ### Exercise 5.1-5.5: Implementation notes
-- **Health & Readiness Checks**: Đã triển khai `/health` (kiểm tra app sống) và `/ready` (kiểm tra kết nối Redis). Điều này giúp Cloud Platform biết khi nào app sẵn sàng nhận traffic và khi nào cần khởi động lại.
-- **Stateless Design**: Agent không lưu history trong memory. Thay vào đó, sử dụng **Redis** để lưu trữ session data. Khi scale lên nhiều instance, bất kỳ instance nào cũng có thể xử lý request của user bằng cách truy xuất session từ Redis.
-- **Graceful Shutdown**: Sử dụng `lifespan` context manager để đảm bảo khi app bị tắt (ví dụ khi deploy bản mới), nó sẽ hoàn thành các request đang xử lý rồi mới đóng kết nối, tránh gây lỗi cho người dùng.
-- **Load Balancing Test**: Khi chạy nhiều replica (dùng Docker Compose), kết quả trả về cho thấy các `instance_id` khác nhau xử lý các request khác nhau, nhưng lịch sử trò chuyện vẫn được duy trì đồng nhất nhờ Redis.
+- **Xác nhận Stateless Design**: Kiểm thử thực tế với `test_stateless.py` cho kết quả thành công rực rỡ (✅ Session history preserved). Mặc dù Nginx điều hướng request đến nhiều instance khác nhau (kiểm chứng qua `instance_id`), nhưng lịch sử trò chuyện vẫn được duy trì đồng nhất nhờ lưu trữ tập trung tại **Redis**.
+- **Health & Readiness Checks**: Đã triển khai và kiểm tra `/health` (liveness) và `/ready` (readiness). App báo `redis_connected: true`, đảm bảo tính ổn định của hệ thống trước khi nhận traffic.
+- **Graceful Shutdown**: Sử dụng `lifespan` manager giúp app xử lý nốt các request dở dang khi nhận tín hiệu SIGTERM, tránh gây lỗi đột ngột cho người dùng khi restart hoặc deploy bản mới.
+- **Load Balancing**: Hệ thống sử dụng Nginx để phân phối tải. Việc mở rộng quy mô (Scaling) được thực hiện mượt mà, chứng minh khả năng sẵn sàng cao (High Availability) của kiến trúc này.
