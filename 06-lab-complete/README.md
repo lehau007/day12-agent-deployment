@@ -1,100 +1,84 @@
-# Lab 12 — Complete Production Agent
+# 🚀 Production AI Agent — Lab 12 Complete
 
-Kết hợp TẤT CẢ những gì đã học trong 1 project hoàn chỉnh.
+Đây là phiên bản hoàn chỉnh của AI Agent được xây dựng trong Lab 12, tích hợp đầy đủ các tiêu chuẩn Production-ready: Docker, Security, Rate Limiting, Cost Guard, và Stateless Session.
 
-## Checklist Deliverable
-
-- [x] Dockerfile (multi-stage, < 500 MB)
-- [x] docker-compose.yml (agent + redis)
-- [x] .dockerignore
-- [x] Health check endpoint (`GET /health`)
-- [x] Readiness endpoint (`GET /ready`)
-- [x] API Key authentication
-- [x] Rate limiting
-- [x] Cost guard
-- [x] Config từ environment variables
-- [x] Structured logging
-- [x] Graceful shutdown
-- [x] Public URL ready (Railway / Render config)
+**🔗 Live Demo:** [https://day12-agent-production-781b.up.railway.app](https://day12-agent-production-781b.up.railway.app)
 
 ---
 
-## Cấu Trúc
+## ✨ Tính Năng Nổi Bật
 
-```
-06-lab-complete/
-├── app/
-│   ├── main.py         # Entry point — kết hợp tất cả
-│   ├── config.py       # 12-factor config
-│   ├── auth.py         # API Key + JWT
-│   ├── rate_limiter.py # Rate limiting
-│   └── cost_guard.py   # Budget protection
-├── Dockerfile          # Multi-stage, production-ready
-├── docker-compose.yml  # Full stack
-├── railway.toml        # Deploy Railway
-├── render.yaml         # Deploy Render
-├── .env.example        # Template
-├── .dockerignore
-└── requirements.txt
-```
+- **🤖 Real AI Chat:** Đã tích hợp **Google Gemini API** (thư viện `google-genai`). Agent có khả năng ghi nhớ ngữ cảnh hội thoại thông qua `session_id`.
+- **🔐 Bảo mật:** Xác thực qua `X-API-Key` header cho mọi request.
+- **🛡️ Rate Limiting:** Giới hạn 10 requests/phút cho mỗi người dùng để tránh lạm dụng.
+- **💰 Cost Guard:** Tự động theo dõi chi phí và chặn request nếu vượt quá ngân sách hàng ngày (mặc định $10/user).
+- **📦 Dockerized:** Multi-stage build tối ưu kích thước (< 200MB), chạy với Non-root user để bảo mật tối đa.
+- **📡 Stateless:** Lưu trữ lịch sử chat trong Redis (nếu có) hoặc bộ nhớ tạm, giúp scale ngang dễ dàng.
+- **🏥 Health & Readiness:** Cung cấp endpoint `/health` và `/ready` cho các hệ thống giám sát và cân bằng tải.
 
 ---
 
-## Chạy Local
+## 💻 Cách Chạy Local
+
+### 1. Cài đặt môi trường
+Đảm bảo bạn đã cài đặt Python 3.10+ và đã cài các thư viện cần thiết:
 
 ```bash
-# 1. Setup
+cd 06-lab-complete
+pip install -r requirements.txt
+```
+
+### 2. Cấu hình biến môi trường
+Tạo file `.env` từ mẫu có sẵn:
+
+```bash
 cp .env.example .env
+```
 
-# 2. Chạy với Docker Compose
-docker compose up
+Mở file `.env` và cập nhật các thông tin quan trọng:
+- **`GOOGLE_API_KEY`**: API Key từ Google AI Studio (Gemini).
+- `AGENT_API_KEY`: Key dùng để gọi API (ví dụ: `my-secret-key`).
+- `REDIS_URL`: Để trống nếu không dùng Redis (mặc định sẽ dùng bộ nhớ trong).
 
-# 3. Test
-curl http://localhost/health
+### 3. Chạy ứng dụng
 
-# 4. Lấy API key từ .env, test endpoint
-API_KEY=$(grep AGENT_API_KEY .env | cut -d= -f2)
-curl -H "X-API-Key: $API_KEY" \
-     -X POST http://localhost/ask \
+**Cách 1: Chạy trực tiếp với Python**
+```bash
+$env:PYTHONPATH="."; uvicorn app.main:app --reload
+```
+
+**Cách 2: Chạy với Docker Compose (Khuyên dùng)**
+```bash
+docker-compose up --build
+```
+
+---
+
+## 🧪 Kiểm tra API
+
+Sau khi server khởi động (mặc định tại `http://localhost:8000`), bạn có thể test bằng `curl` hoặc Postman:
+
+**1. Kiểm tra trạng thái:**
+```bash
+curl http://localhost:8000/health
+```
+
+**2. Gửi câu hỏi (Chat):**
+```bash
+curl -X POST http://localhost:8000/ask \
      -H "Content-Type: application/json" \
-     -d '{"question": "What is deployment?"}'
+     -H "X-API-Key: your-agent-api-key-here" \
+     -d '{"question": "Xin chào, bạn là ai?", "session_id": "user-123"}'
 ```
 
 ---
 
-## Deploy Railway (< 5 phút)
+## 🚢 Deploy lên Railway
 
-```bash
-# Cài Railway CLI
-npm i -g @railway/cli
-
-# Login và deploy
-railway login
-railway init
-railway variables set OPENAI_API_KEY=sk-...
-railway variables set AGENT_API_KEY=your-secret-key
-railway up
-
-# Nhận public URL!
-railway domain
-```
+Dự án này đã được cấu hình sẵn cho Railway thông qua file `railway.toml`.
+1. Kết nối repo này với Railway.
+2. Thêm các Variables: **`GOOGLE_API_KEY`**, `AGENT_API_KEY`.
+3. Railway sẽ tự động build và deploy từ `Dockerfile`.
 
 ---
-
-## Deploy Render
-
-1. Push repo lên GitHub
-2. Render Dashboard → New → Blueprint
-3. Connect repo → Render đọc `render.yaml`
-4. Set secrets: `OPENAI_API_KEY`, `AGENT_API_KEY`
-5. Deploy → Nhận URL!
-
----
-
-## Kiểm Tra Production Readiness
-
-```bash
-python check_production_ready.py
-```
-
-Script này kiểm tra tất cả items trong checklist và báo cáo những gì còn thiếu.
+*Dự án thuộc nội dung Lab 12 — VinUni.*

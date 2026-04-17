@@ -20,22 +20,17 @@ from app.config import settings
 from app.auth import verify_api_key
 from app.rate_limiter import limiter
 from app.cost_guard import cost_guard
-from utils.mock_llm import ask as llm_ask
+from utils.google_llm import ask as llm_ask
 
 # ─────────────────────────────────────────────────────────
 # Redis Storage for Stateless Session (History)
 # ─────────────────────────────────────────────────────────
-try:
-    import redis
-    if settings.redis_url:
-        _redis = redis.from_url(settings.redis_url, decode_responses=True)
-        _redis.ping()
-        USE_REDIS = True
-        print("✅ Connected to Redis for Session Storage")
-    else:
-        USE_REDIS = False
-except Exception:
-    USE_REDIS = False
+from app.redis_client import redis_manager
+
+_redis = redis_manager.get_client()
+USE_REDIS = redis_manager.use_redis
+
+if not USE_REDIS:
     _memory_history = {}
 
 def get_history(session_id: str) -> list:
@@ -156,7 +151,13 @@ async def ask_agent(
 
     # 4. LLM Call
     input_tokens = len(full_prompt.split()) * 2
-    answer = llm_ask(body.question) # Mock LLM only takes question for now
+    try:
+        answer = llm_ask(full_prompt)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("LLM request failed")
+        raise HTTPException(status_code=502, detail="LLM provider error") from exc
     output_tokens = len(answer.split()) * 2
 
     # 5. Record Usage

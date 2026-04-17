@@ -13,17 +13,11 @@ logger = logging.getLogger(__name__)
 PRICE_PER_1K_INPUT_TOKENS = 0.00015
 PRICE_PER_1K_OUTPUT_TOKENS = 0.0006
 
-# Attempt to connect to Redis
-try:
-    import redis
-    if settings.redis_url:
-        _redis = redis.from_url(settings.redis_url, decode_responses=True)
-        _redis.ping()
-        USE_REDIS = True
-    else:
-        USE_REDIS = False
-except Exception:
-    USE_REDIS = False
+from app.redis_client import redis_manager
+
+# Use shared Redis client
+_redis = redis_manager.get_client()
+USE_REDIS = redis_manager.use_redis
 
 class CostGuard:
     def __init__(self, daily_budget_usd: float, global_daily_budget_usd: float):

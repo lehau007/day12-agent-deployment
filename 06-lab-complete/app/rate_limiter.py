@@ -7,17 +7,11 @@ from collections import defaultdict, deque
 from fastapi import HTTPException
 from app.config import settings
 
-# Attempt to connect to Redis
-try:
-    import redis
-    if settings.redis_url:
-        _redis = redis.from_url(settings.redis_url, decode_responses=True)
-        _redis.ping()
-        USE_REDIS = True
-    else:
-        USE_REDIS = False
-except Exception:
-    USE_REDIS = False
+from app.redis_client import redis_manager
+
+# Use shared Redis client
+_redis = redis_manager.get_client()
+USE_REDIS = redis_manager.use_redis
 
 class RateLimiter:
     def __init__(self, max_requests: int = 10, window_seconds: int = 60):
